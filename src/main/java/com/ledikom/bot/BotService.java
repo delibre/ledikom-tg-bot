@@ -44,6 +44,9 @@ public class BotService {
                 .chatId(chatId)
                 .text(BotResponses.startMessage()).build();
 
+//        User user = userService.findByChatId(chatId);
+//        Coupon coupon = user.getCoupons().stream().filter(c -> c.getName().equals(helloCouponName)).findFirst().orElse(null);
+
         // TODO: extract to a method
         var markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
@@ -56,10 +59,30 @@ public class BotService {
         row.add(button);
         keyboard.add(row);
         markup.setKeyboard(keyboard);
+
         sm.setReplyMarkup(markup);
+
+//        sm.setReplyMarkup(createInlineButton(coupon.getText(), "coupon" + coupon.getId()));
 
         return sm;
     }
+
+//    private InlineKeyboardMarkup createInlineButton(String buttonLabel, String callback) {
+//        var markup = new InlineKeyboardMarkup();
+//
+//        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+//
+//        var button = new InlineKeyboardButton();
+//        button.setText(buttonLabel);
+//        button.setCallbackData(callback);
+//        List<InlineKeyboardButton> row = new ArrayList<>();
+//        row.add(button);
+//        keyboard.add(row);
+//
+//        markup.setKeyboard(keyboard);
+//
+//        return markup;
+//    }
 
     public Coupon generateHelloCouponForUserIfNotUsed(final Long chatId) {
         User user = userService.findByChatId(chatId);
@@ -74,4 +97,44 @@ public class BotService {
         long expiryTimestamp = System.currentTimeMillis() + helloCouponTimeInMinutes * 60 * 1000L;
         userCoupons.put(userCouponKey, new UserCouponRecord(expiryTimestamp, couponText));
     }
+
+    public SendMessage showAllCoupons(final Long chatId) {
+        User user = userService.findByChatId(chatId);
+        Set<Coupon> userCoupons = user.getCoupons();
+        var sm = new SendMessage();
+
+        if (userCoupons.isEmpty()) {
+            sm = SendMessage.builder()
+                    .chatId(chatId)
+                    .text("У вас нету купонов").build();
+        } else {
+            sm = SendMessage.builder()
+                    .chatId(chatId)
+                    .text("Ваши купоны:").build();
+
+            sm.setReplyMarkup(createInlineKeyboardMarkup(userCoupons));
+        }
+
+        return sm;
+    }
+
+    private InlineKeyboardMarkup createInlineKeyboardMarkup(final Set<Coupon> coupons) {
+        var markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+
+        for (Coupon coupon : coupons) {
+            var button = new InlineKeyboardButton();
+            button.setText(coupon.getName());
+            button.setCallbackData("coupon" + coupon.getId());
+            List<InlineKeyboardButton> row = new ArrayList<>();
+            row.add(button);
+            keyboard.add(row);
+        }
+
+        markup.setKeyboard(keyboard);
+
+        return markup;
+    }
+
+
 }

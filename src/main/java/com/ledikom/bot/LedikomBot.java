@@ -1,7 +1,6 @@
 package com.ledikom.bot;
 
 import com.ledikom.model.Coupon;
-import com.ledikom.model.User;
 import com.ledikom.model.UserCouponKey;
 import com.ledikom.model.UserCouponRecord;
 import org.slf4j.Logger;
@@ -14,9 +13,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
-
-import java.util.Timer;
-import java.util.TimerTask;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 @Component
 public class LedikomBot extends TelegramLongPollingBot {
@@ -81,9 +78,13 @@ public class LedikomBot extends TelegramLongPollingBot {
                 }
             }
 
-            case "/setnotification" -> System.out.println("setnotification");
+            case "/mycoupons" -> {
+                sendMessage(botService.showAllCoupons(chatId));
+            }
 
-            case "/deletenotification" -> System.out.println("deletenotification");
+            case "/setreminder" -> System.out.println("setreminder");
+
+            case "/removereminders" -> System.out.println("removereminder");
 
             case "/showpharmacies" -> System.out.println("pharmacies");
 
@@ -102,16 +103,16 @@ public class LedikomBot extends TelegramLongPollingBot {
 
         try {
             execute(sm);
-        } catch (Exception e) {
-            log.trace(e.getMessage());
+        } catch (TelegramApiException e) {
+            log.error("Error sending message: " + e.getMessage(), e);
         }
     }
 
     private void sendMessage(SendMessage sm) {
         try {
             execute(sm);
-        } catch (Exception e) {
-            log.trace(e.getMessage());
+        } catch (TelegramApiException e) {
+            log.error("Error sending message: " + e.getMessage(), e);
         }
     }
 
@@ -122,8 +123,8 @@ public class LedikomBot extends TelegramLongPollingBot {
         try {
             Message sentMessage = execute(sm);
             return new UserCouponKey(sentMessage.getChatId(), sentMessage.getMessageId());
-        } catch (Exception e) {
-            log.trace(e.getMessage());
+        } catch (TelegramApiException e) {
+            log.error("Error sending message: " + e.getMessage(), e);
         }
 
         return null;
@@ -138,8 +139,8 @@ public class LedikomBot extends TelegramLongPollingBot {
 
         try {
             execute(editMessageText);
-        } catch (Exception e) {
-            log.trace(e.getMessage());
+        } catch (TelegramApiException e) {
+            log.error("Error sending message: " + e.getMessage(), e);
         }
     }
 
