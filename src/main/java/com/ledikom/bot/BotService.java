@@ -42,7 +42,7 @@ public class BotService {
     }
 
     public SendMessage createNewCoupon(final String couponData) {
-        String[] data = couponData.split("/");
+        String[] data = couponData.split(";\n");
 
         ZoneId moscowZone = ZoneId.of("Europe/Moscow");
         LocalDateTime zonedDateTime = LocalDateTime.now(moscowZone).plusDays(Long.parseLong(data[5]));
