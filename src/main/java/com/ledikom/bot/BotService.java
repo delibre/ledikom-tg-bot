@@ -30,6 +30,8 @@ public class BotService {
     private String helloCouponName;
     @Value("${coupon.time-in-minutes}")
     private int couponTimeInMinutes;
+    @Value("${admin_id}")
+    private Long adminId;
 
     private final UserService userService;
     private final CouponService couponService;
@@ -37,6 +39,23 @@ public class BotService {
     public BotService(final UserService userService, final CouponService couponService) {
         this.userService = userService;
         this.couponService = couponService;
+    }
+
+    public SendMessage createNewCoupon(final String couponData) {
+        String[] data = couponData.split("/");
+
+        ZoneId moscowZone = ZoneId.of("Europe/Moscow");
+        LocalDateTime zonedDateTime = LocalDateTime.now(moscowZone).plusDays(Long.parseLong(data[5]));
+        zonedDateTime = zonedDateTime.withHour(23).withMinute(59).withSecond(59);
+
+        Coupon coupon = couponService.createNewCoupon(Integer.parseInt(data[1]), data[2], data[3], zonedDateTime);
+
+        var sm = new SendMessage();
+        sm.setText(data[4]);
+
+        addCouponButton(sm, coupon, "Активировать купон", "couponPreview_");
+
+        return sm;
     }
 
     public SendMessage addUserAndGenerateHelloMessage(final long chatId) {

@@ -7,6 +7,7 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -39,6 +40,22 @@ public class CouponService {
         }
     }
 
+    public Coupon createNewCoupon(final int discount, final String name, final String text, final LocalDateTime expiryDateTime) {
+        Coupon newCoupon = new Coupon(text, name, discount, expiryDateTime);
+        couponRepository.save(newCoupon);
+
+        couponRepository.save(newCoupon);
+
+        List<User> users = userService.getAllUsers();
+
+        if (!users.isEmpty()) {
+            users.forEach(user -> user.getCoupons().add(newCoupon));
+            userService.saveAll(users);
+        }
+
+        return newCoupon;
+    }
+
     public void addCouponsToUser(final User user) {
         List<Coupon> coupons = couponRepository.findAll();
         user.getCoupons().addAll(coupons);
@@ -52,5 +69,13 @@ public class CouponService {
     public Coupon findCouponForUser(final User user, final String couponCommand) {
         int couponId = Integer.parseInt(couponCommand.split("_")[1]);
         return user.getCoupons().stream().filter(c -> c.getId() == couponId).findFirst().orElse(null);
+    }
+
+    public List<Coupon> getAllCoupons() {
+        return couponRepository.findAll();
+    }
+
+    public void deleteCoupon(Coupon coupon) {
+        couponRepository.delete(coupon);
     }
 }

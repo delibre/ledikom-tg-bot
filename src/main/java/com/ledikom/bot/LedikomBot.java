@@ -4,6 +4,8 @@ import com.ledikom.model.Coupon;
 import com.ledikom.model.User;
 import com.ledikom.model.UserCouponKey;
 import com.ledikom.model.UserCouponRecord;
+import com.ledikom.service.CouponService;
+import com.ledikom.service.UserService;
 import com.ledikom.utils.BotResponses;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,9 +17,11 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.util.Timer;
-import java.util.TimerTask;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Objects;
 
 @Component
 public class LedikomBot extends TelegramLongPollingBot {
@@ -28,13 +32,20 @@ public class LedikomBot extends TelegramLongPollingBot {
     private String botToken;
     @Value("${tech_admin_id}")
     private Long techAdminId;
+    @Value("${admin_id}")
+    private Long adminId;
     @Value("${coupon.time-in-minutes}")
     private int couponTimeInMinutes;
     private final BotService botService;
     private final Logger log = LoggerFactory.getLogger(LedikomBot.class);
+    private final UserService userService;
+    private final CouponService couponService;
 
-    public LedikomBot(BotService botService) {
+
+    public LedikomBot(BotService botService, UserService userService, CouponService couponService) {
         this.botService = botService;
+        this.userService = userService;
+        this.couponService = couponService;
     }
 
     @Override
@@ -53,11 +64,23 @@ public class LedikomBot extends TelegramLongPollingBot {
         if (update.hasMessage() && update.getMessage().hasText()) {
             var msg = update.getMessage();
             var chatId = msg.getChatId();
+
+            if (Objects.equals(chatId, adminId)) {
+                processAdminMessage(msg.getText());
+                return;
+            }
+
             processMessage(msg.getText(), chatId);
 
         } else if (update.hasCallbackQuery()) {
             var qry = update.getCallbackQuery();
             var chatId = qry.getMessage().getChatId();
+
+            if (Objects.equals(chatId, adminId)) {
+                processAdminMessage(qry.getData());
+                return;
+            }
+
             processMessage(qry.getData(), chatId);
         }
 
@@ -79,15 +102,48 @@ public class LedikomBot extends TelegramLongPollingBot {
 
             case "/activecoupons" -> sendMessage(botService.showAllCoupons(chatId));
 
-            case "/setnotification" -> System.out.println("setnotification");
+            case "/setreminder" -> System.out.println("setnotification");
 
-            case "/deletenotification" -> System.out.println("deletenotification");
+            case "/removereminder" -> System.out.println("deletenotification");
 
             case "/showpharmacies" -> System.out.println("pharmacies");
 
             default -> {
                 log.error("Illegal State", new IllegalStateException());
                 sendMessage(new IllegalStateException().toString(), techAdminId);
+            }
+        }
+    }
+
+    public void processAdminMessage(String command) {
+
+        if(command.startsWith("coupon")) {
+            broadcastMessage(botService.createNewCoupon(command));
+            return;
+        }
+
+        switch (command) {
+            case "/start" -> sendMessage(BotResponses.helloAdmin(), adminId);
+
+            case "/createpoll" -> System.out.println("createpoll");
+
+            default -> {
+                log.error("Illegal State", new IllegalStateException());
+                sendMessage(new IllegalStateException().toString(), techAdminId);
+            }
+        }
+    }
+
+    public void broadcastMessage(SendMessage sm) {
+        List<User> registeredUsers = userService.getAllUsers();
+
+        for (User user : registeredUsers) {
+            sm.setChatId(user.getChatId());
+
+            try {
+                execute(sm);
+            } catch (TelegramApiException e) {
+                log.error(e.getMessage());
             }
         }
     }
@@ -125,8 +181,8 @@ public class LedikomBot extends TelegramLongPollingBot {
     private void sendMessage(SendMessage sm) {
         try {
             execute(sm);
-        } catch (Exception e) {
-            log.trace(e.getMessage());
+        } catch (TelegramApiException e) {
+            log.error(e.getMessage());
         }
     }
 
@@ -137,8 +193,8 @@ public class LedikomBot extends TelegramLongPollingBot {
         try {
             Message sentMessage = execute(sm);
             return new UserCouponKey(sentMessage.getChatId(), sentMessage.getMessageId());
-        } catch (Exception e) {
-            log.trace(e.getMessage());
+        } catch (TelegramApiException e) {
+            log.error(e.getMessage());
         }
 
         return null;
@@ -153,8 +209,8 @@ public class LedikomBot extends TelegramLongPollingBot {
 
         try {
             execute(editMessageText);
-        } catch (Exception e) {
-            log.trace(e.getMessage());
+        } catch (TelegramApiException e) {
+            log.error(e.getMessage());
         }
     }
 
@@ -173,5 +229,18 @@ public class LedikomBot extends TelegramLongPollingBot {
     public void processCouponsInMap() {
         BotService.userCoupons.forEach(this::updateCouponTimerAndMessage);
         botService.removeExpiredCouponsFromMap();
+    }
+
+    @Scheduled(cron = "0 0 0 * * *")
+    public void deleteCouponsIfExpired() {
+        List<Coupon> coupons = couponService.getAllCoupons();
+
+        LocalDateTime currentDateTime = LocalDateTime.now();
+
+        for (Coupon coupon : coupons) {
+            if(coupon.getId() != 1 && currentDateTime.isAfter(coupon.getExpiryDateTime())) {
+                couponService.deleteCoupon(coupon);
+            }
+        }
     }
 }
