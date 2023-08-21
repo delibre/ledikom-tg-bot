@@ -66,7 +66,7 @@ public class BotService {
         CouponService.userCoupons.entrySet().removeIf(userCoupon -> userCoupon.getValue().getExpiryTimestamp() < System.currentTimeMillis() - 5000);
     }
 
-    @Scheduled(fixedRate = 10000)
+    @Scheduled(fixedRate = 1000 * 60 * 60)
     public void sendPollInfoToAdmin() {
         SendMessage sm = botUtilityService.buildSendMessage(pollService.getPollsInfoForAdmin(), adminId);
         sendMessageCallback.execute(sm);
