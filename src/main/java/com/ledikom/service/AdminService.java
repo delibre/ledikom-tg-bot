@@ -1,9 +1,8 @@
 package com.ledikom.service;
 
 import com.ledikom.callback.GetFileFromBotCallback;
-import com.ledikom.model.Coupon;
-import com.ledikom.model.RequestFromAdmin;
 import com.ledikom.model.NewsFromAdmin;
+import com.ledikom.model.RequestFromAdmin;
 import com.ledikom.utils.AdminMessageToken;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.Update;

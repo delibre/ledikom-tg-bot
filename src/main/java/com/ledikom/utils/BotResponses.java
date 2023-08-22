@@ -79,6 +79,7 @@ public final class BotResponses {
 
     public static String newCoupon(final String description, LocalDateTime expirationDate) {
         return description + "\n\nАкция действует до " + expirationDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    }
 
     public static String noteAdded() {
         return "Заметка записана, можете редактировать через меню";

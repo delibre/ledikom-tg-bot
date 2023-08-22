@@ -74,10 +74,11 @@ public class BotService {
         LocalDateTime currentDateTime = LocalDateTime.now();
 
         for (Coupon coupon : coupons) {
-            if(coupon.getId() != 1 && currentDateTime.isAfter(coupon.getExpiryDateTime())) {
+            if (coupon.getId() != 1 && currentDateTime.isAfter(coupon.getExpiryDateTime())) {
                 couponService.deleteCoupon(coupon);
             }
         }
+    }
       
     @Scheduled(fixedRate = 1000 * 60 * 60)
     public void sendPollInfoToAdmin() {
@@ -213,19 +214,19 @@ public class BotService {
         if (splitStringsFromAdminMessage.get(0).equals(AdminMessageToken.NEWS.label)) {
             sendNewsToUsers(requestFromAdmin.getPhotoPath(), splitStringsFromAdminMessage);
         } else if (splitStringsFromAdminMessage.get(0).equals(AdminMessageToken.COUPON.label)) {
-            createNewCoupon(messageFromAdmin.getPhotoPath(), splitStringsFromAdminMessage);
+            createNewCoupon(requestFromAdmin.getPhotoPath(), splitStringsFromAdminMessage);
         }
     }
 
-    private void createNewCoupon(final String photoPath, final List<String> splitStringsFromAdminMessage){
+    private void createNewCoupon(final String photoPath, final List<String> splitStringsFromAdminMessage) {
         ZoneId moscowZone = ZoneId.of("Europe/Moscow");
         LocalDateTime zonedDateTime = LocalDateTime.now(moscowZone).plusDays(Long.parseLong(splitStringsFromAdminMessage.get(5)));
         zonedDateTime = zonedDateTime.withHour(23).withMinute(59).withSecond(59);
 
         couponService.createNewCoupon(Integer.parseInt(splitStringsFromAdminMessage.get(1)),
-                                                       splitStringsFromAdminMessage.get(2),
-                                                       splitStringsFromAdminMessage.get(3),
-                                                       zonedDateTime);
+                splitStringsFromAdminMessage.get(2),
+                splitStringsFromAdminMessage.get(3),
+                zonedDateTime);
 
         List<User> usersToSendNews = userService.getAllUsersToReceiveNews();
         String messageToUsers = BotResponses.newCoupon(splitStringsFromAdminMessage.get(4), zonedDateTime);
@@ -235,6 +236,7 @@ public class BotService {
         } else {
             usersToSendNews.forEach(user -> sendMessageWithPhotoCallback.execute(photoPath, messageToUsers, user.getChatId()));
         }
+    }
 
     private void executeAdminActionOnPollReceived(final Poll poll) {
         com.ledikom.model.Poll entityPoll = pollService.tgPollToLedikomPoll(poll);
