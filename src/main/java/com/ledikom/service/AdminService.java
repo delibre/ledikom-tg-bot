@@ -1,6 +1,7 @@
 package com.ledikom.service;
 
 import com.ledikom.callback.GetFileFromBotCallback;
+import com.ledikom.model.Coupon;
 import com.ledikom.model.MessageFromAdmin;
 import com.ledikom.model.NewFromAdmin;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,9 @@ public class AdminService {
     public NewFromAdmin getNewsByAdmin(final List<String> splitStringsFromAdminMessage, final String photoPath) {
         return new NewFromAdmin(splitStringsFromAdminMessage.size() > 1 ? splitStringsFromAdminMessage.get(1) : "", photoPath);
     }
+
+//    public Coupon createNewCoupon(final List<String> splitStringsFromAdminMessage) {
+//    }
 
     public MessageFromAdmin getMessageByAdmin(final Update update, final GetFileFromBotCallback getFileFromBotCallback) {
         MessageFromAdmin messageFromAdmin = new MessageFromAdmin();

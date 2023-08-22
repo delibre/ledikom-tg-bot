@@ -4,6 +4,9 @@ import com.ledikom.model.Coupon;
 import com.ledikom.model.User;
 import com.ledikom.model.UserCouponRecord;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 public final class BotResponses {
 
     public static String startMessage() {
@@ -71,5 +74,9 @@ public final class BotResponses {
 
     public static String helloCoupon(final int helloCouponDiscount) {
         return "Приветственный купон -" + helloCouponDiscount + "% на вашу следующую покупку.";
+    }
+
+    public static String newCoupon(final String description, LocalDateTime expirationDate) {
+        return description + "\n\nАкция действует до " + expirationDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     }
 }

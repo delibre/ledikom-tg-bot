@@ -48,6 +48,21 @@ public class CouponService {
         userService.saveAll(users);
     }
 
+    public void createNewCoupon(final int discount, final String name, final String text, final LocalDateTime expiryDateTime) {
+        Coupon newCoupon = new Coupon(text, name, discount, expiryDateTime);
+        couponRepository.save(newCoupon);
+
+        couponRepository.save(newCoupon);
+
+        List<User> users = userService.getAllUsers();
+
+        if (!users.isEmpty()) {
+            users.forEach(user -> user.getCoupons().add(newCoupon));
+            userService.saveAll(users);
+        }
+
+    }
+
     public Coupon findByName(final String helloCouponName) {
         return couponRepository.findByName(helloCouponName).orElseThrow(() -> new RuntimeException("Coupon not found"));
     }
@@ -107,5 +122,13 @@ public class CouponService {
         markup.setKeyboard(keyboard);
 
         return markup;
+    }
+
+    public List<Coupon> getAllCoupons() {
+        return couponRepository.findAll();
+    }
+
+    public void deleteCoupon(Coupon coupon) {
+        couponRepository.delete(coupon);
     }
 }
