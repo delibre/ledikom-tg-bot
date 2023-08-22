@@ -15,8 +15,8 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.List;
+import java.util.Set;
 
 @Component
 public class BotService {
@@ -169,7 +169,7 @@ public class BotService {
         if (splitStringsFromAdminMessage.get(0).equals(AdminMessageToken.NEWS.label)) {
             sendNewsToUser(messageFromAdmin.getPhotoPath(), splitStringsFromAdminMessage);
         } else if (splitStringsFromAdminMessage.get(0).equals(AdminMessageToken.COUPON.label)) {
-            createNewCoupon(splitStringsFromAdminMessage);
+            createNewCoupon(messageFromAdmin.getPhotoPath(), splitStringsFromAdminMessage);
         }
     }
 
@@ -184,7 +184,7 @@ public class BotService {
         }
     }
 
-    private void createNewCoupon(final List<String> splitStringsFromAdminMessage){
+    private void createNewCoupon(final String photoPath, final List<String> splitStringsFromAdminMessage){
         ZoneId moscowZone = ZoneId.of("Europe/Moscow");
         LocalDateTime zonedDateTime = LocalDateTime.now(moscowZone).plusDays(Long.parseLong(splitStringsFromAdminMessage.get(5)));
         zonedDateTime = zonedDateTime.withHour(23).withMinute(59).withSecond(59);
@@ -197,6 +197,10 @@ public class BotService {
         List<User> usersToSendNews = userService.getAllUsersToReceiveNews();
         String messageToUsers = BotResponses.newCoupon(splitStringsFromAdminMessage.get(4), zonedDateTime);
 
-        usersToSendNews.forEach(user -> sendMessageCallback.execute(botUtilityService.buildSendMessage(messageToUsers, user.getChatId())));
+        if (photoPath == null || photoPath.isBlank()) {
+            usersToSendNews.forEach(user -> sendMessageCallback.execute(botUtilityService.buildSendMessage(messageToUsers, user.getChatId())));
+        } else {
+            usersToSendNews.forEach(user -> sendMessageWithPhotoCallback.execute(photoPath, messageToUsers, user.getChatId()));
+        }
     }
 }
