@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
+import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethodMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
@@ -23,10 +24,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Predicate;
 
 
@@ -64,6 +62,8 @@ public class LedikomBot extends TelegramLongPollingBot {
                 this.botService::sendReferralLinkForUser);
         chatIdActions.put(cmd -> cmd.equals("/vkl_otkl_rassylku"),
                 this.botService::sendTriggerReceiveNewsMessage);
+        chatIdActions.put(cmd -> cmd.equals("/zametki"),
+                this.botService::sendNoteAndSetUserResponseState);
     }
 
     public SendMessageWithPhotoCallback getSendMessageWithPhotoCallback() {
@@ -102,27 +102,29 @@ public class LedikomBot extends TelegramLongPollingBot {
         if (update.hasMessage()) {
             var msg = update.getMessage();
             var chatId = msg.getChatId();
-            if (Objects.equals(chatId, adminId)) {
-                processAdminMessage(update);
-            }
+            boolean userIsInActiveState = false;
             if (msg.hasText()) {
-                processMessage(msg.getText(), chatId);
+                userIsInActiveState = processMessage(msg.getText(), chatId);
+            }
+            if (Objects.equals(chatId, adminId) && !userIsInActiveState) {
+                botService.processAdminRequest(update);
             }
         } else if (update.hasCallbackQuery()) {
             var qry = update.getCallbackQuery();
             var chatId = qry.getMessage().getChatId();
             processMessage(qry.getData(), chatId);
+        } else if (update.hasPoll()) {
+            botService.processPoll(update.getPoll());
         }
     }
 
-    private void processAdminMessage(final Update update) {
-        botService.processAdminMessage(update);
-    }
+//    kupony - Мои активные купоны
+//    zametki - Мои заметки
+//    moya_ssylka - Моя реферальная ссылка
+//    vkl_otkl_rassylku - Вкл/Откл рассылку новостей
+    private boolean processMessage(String command, Long chatId) {
+        boolean processed = false;
 
-    //    kupony - Мои активные купоны
-    //    moya_ssylka - Моя реферальная ссылка
-    //    vkl_otkl_rassylku - Вкл/Откл рассылку новостей
-    private void processMessage(String command, Long chatId) {
         Optional<ChatIdCallback> chatIdCallback = chatIdActions.entrySet().stream()
                 .filter(entry -> entry.getKey().test(command))
                 .map(Map.Entry::getValue)
@@ -130,13 +132,27 @@ public class LedikomBot extends TelegramLongPollingBot {
         boolean isChatIdAction = chatIdCallback.isPresent();
         if (isChatIdAction) {
             chatIdCallback.get().execute(chatId);
+            processed = true;
         } else {
-            commandWithChatIdActions.entrySet().stream()
+            Optional<CommandWithChatIdCallback> commandWithChatIdCallback = commandWithChatIdActions.entrySet().stream()
                     .filter(entry -> entry.getKey().test(command))
                     .map(Map.Entry::getValue)
-                    .findFirst()
-                    .ifPresent(action -> action.execute(command, chatId));
+                    .findFirst();
+            boolean isCommandWithChatIdAction = commandWithChatIdCallback.isPresent();
+
+            if (isCommandWithChatIdAction) {
+                commandWithChatIdCallback.get().execute(command, chatId);
+                processed = true;
+            }
         }
+
+        boolean userIsInActiveState = botService.userIsInActiveState(chatId);
+
+        if (!processed && userIsInActiveState) {
+            botService.processStatefulUserResponse(command, chatId);
+        }
+
+        return userIsInActiveState;
     }
 
     private File getFileFromBot(final GetFile getFileRequest) throws TelegramApiException {
@@ -157,10 +173,10 @@ public class LedikomBot extends TelegramLongPollingBot {
         }
     }
 
-    private void sendMessage(SendMessage sm) {
+    private void sendMessage(BotApiMethodMessage message) {
         try {
-            if (sm != null) {
-                execute(sm);
+            if (message != null) {
+                execute(message);
             }
         } catch (Exception e) {
             log.trace(e.getMessage());

@@ -2,8 +2,9 @@ package com.ledikom.service;
 
 import com.ledikom.callback.GetFileFromBotCallback;
 import com.ledikom.model.Coupon;
-import com.ledikom.model.MessageFromAdmin;
-import com.ledikom.model.NewFromAdmin;
+import com.ledikom.model.RequestFromAdmin;
+import com.ledikom.model.NewsFromAdmin;
+import com.ledikom.utils.AdminMessageToken;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
@@ -23,33 +24,33 @@ public class AdminService {
     }
 
     public List<String> getSplitStrings(final String messageFromAdmin) {
+        if (messageFromAdmin == null || messageFromAdmin.isBlank()) {
+            return List.of(AdminMessageToken.NEWS.label);
+        }
         List<String> splitStringsFromAdminMessage = new ArrayList<>(Arrays.stream(messageFromAdmin.split(DELIMITER)).map(String::trim).toList());
         splitStringsFromAdminMessage.set(0, splitStringsFromAdminMessage.get(0).toLowerCase());
         return splitStringsFromAdminMessage;
     }
 
-    public NewFromAdmin getNewsByAdmin(final List<String> splitStringsFromAdminMessage, final String photoPath) {
-        return new NewFromAdmin(splitStringsFromAdminMessage.size() > 1 ? splitStringsFromAdminMessage.get(1) : "", photoPath);
+    public NewsFromAdmin getNewsByAdmin(final List<String> splitStringsFromAdminMessage, final String photoPath) {
+        return new NewsFromAdmin(splitStringsFromAdminMessage.size() > 1 ? splitStringsFromAdminMessage.get(1) : "", photoPath);
     }
 
-//    public Coupon createNewCoupon(final List<String> splitStringsFromAdminMessage) {
-//    }
-
-    public MessageFromAdmin getMessageByAdmin(final Update update, final GetFileFromBotCallback getFileFromBotCallback) {
-        MessageFromAdmin messageFromAdmin = new MessageFromAdmin();
+    public RequestFromAdmin getRequestFromAdmin(final Update update, final GetFileFromBotCallback getFileFromBotCallback) {
+        RequestFromAdmin requestFromAdmin = new RequestFromAdmin();
 
         var msg = update.getMessage();
         String photoPath;
-        if (msg.hasPhoto()) {
+        if (msg.hasPhoto() || msg.hasDocument()) {
             photoPath = botUtilityService.getPhotoFromUpdate(msg, getFileFromBotCallback);
-            messageFromAdmin.setPhotoPath(photoPath);
-            if (photoPath != null) {
-                messageFromAdmin.setMessage(msg.getCaption());
-            }
+            requestFromAdmin.setPhotoPath(photoPath);
+            requestFromAdmin.setMessage(msg.getCaption());
         } else if (msg.hasText()) {
-            messageFromAdmin.setMessage(msg.getText());
+            requestFromAdmin.setMessage(msg.getText());
+        } else if (msg.hasPoll()) {
+            requestFromAdmin.setPoll(msg.getPoll());
         }
 
-        return messageFromAdmin;
+        return requestFromAdmin;
     }
 }
