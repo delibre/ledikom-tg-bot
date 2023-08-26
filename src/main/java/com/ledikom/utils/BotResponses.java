@@ -1,10 +1,10 @@
 package com.ledikom.utils;
 
 import com.ledikom.model.Coupon;
+import com.ledikom.model.NewCouponFromAdmin;
 import com.ledikom.model.User;
 import com.ledikom.model.UserCouponRecord;
 
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 public final class BotResponses {
@@ -77,8 +77,8 @@ public final class BotResponses {
     }
 
 
-    public static String newCoupon(final String description, LocalDateTime expirationDate) {
-        return description + "\n\nАкция действует до " + expirationDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    public static String newCoupon(final NewCouponFromAdmin coupon) {
+        return coupon.getCouponAnnouncementText() + "\n\nАкция действует до " + coupon.getExpirationDate().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
     }
 
     public static String noteAdded() {

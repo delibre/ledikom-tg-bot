@@ -48,10 +48,8 @@ public class CouponService {
         userService.saveAll(users);
     }
 
-    public void createNewCoupon(final int discount, final String name, final String text, final LocalDateTime expiryDateTime) {
-        Coupon newCoupon = new Coupon(text, name, discount, expiryDateTime);
-        couponRepository.save(newCoupon);
-
+    public Coupon createNewCoupon(final int discount, final String name, final String couponDescription, final LocalDateTime expiryDateTime) {
+        Coupon newCoupon = new Coupon(couponDescription, name, discount, expiryDateTime);
         couponRepository.save(newCoupon);
 
         List<User> users = userService.getAllUsers();
@@ -61,6 +59,20 @@ public class CouponService {
             userService.saveAll(users);
         }
 
+        return newCoupon;
+    }
+
+    public void deleteCouponIfExpired() {
+        List<Coupon> coupons = getAllCoupons();
+
+        ZoneId moscowZone = ZoneId.of("Europe/Moscow");
+        LocalDateTime currentDateTime = LocalDateTime.now(moscowZone);
+
+        for (Coupon coupon : coupons) {
+            if(!Objects.equals(coupon.getName(), helloCouponName) && currentDateTime.isAfter(coupon.getExpiryDateTime())) {
+                deleteCoupon(coupon);
+            }
+        }
     }
 
     public Coupon findByName(final String helloCouponName) {
@@ -103,7 +115,7 @@ public class CouponService {
         String timeSign = UtilityHelper.convertIntToTimeInt(zonedDateTime.getDayOfMonth()) + "." + UtilityHelper.convertIntToTimeInt(zonedDateTime.getMonthValue()) + "." + zonedDateTime.getYear()
                 + " " + UtilityHelper.convertIntToTimeInt(zonedDateTime.getHour()) + ":" + UtilityHelper.convertIntToTimeInt(zonedDateTime.getMinute()) + ":" + UtilityHelper.convertIntToTimeInt(zonedDateTime.getSecond());
 
-        return coupon.getText() + "\n\n" + BotResponses.couponUniqueSign(timeSign);
+        return coupon.getDescription() + "\n\n" + BotResponses.couponUniqueSign(timeSign);
     }
 
     public InlineKeyboardMarkup createListOfCoupons(final Set<Coupon> coupons) {

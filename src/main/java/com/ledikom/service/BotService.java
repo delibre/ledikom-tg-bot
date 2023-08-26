@@ -15,7 +15,6 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.polls.Poll;
 
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.*;
 
 @Component
@@ -67,19 +66,11 @@ public class BotService {
         CouponService.userCoupons.entrySet().removeIf(userCoupon -> userCoupon.getValue().getExpiryTimestamp() < System.currentTimeMillis() - 5000);
     }
 
-    @Scheduled(cron = "0 0 0 * * *")
+    @Scheduled(cron = "0 0 21 * * *", zone = "Europe/Moscow")
     public void deleteCouponsIfExpired() {
-        List<Coupon> coupons = couponService.getAllCoupons();
-
-        LocalDateTime currentDateTime = LocalDateTime.now();
-
-        for (Coupon coupon : coupons) {
-            if (coupon.getId() != 1 && currentDateTime.isAfter(coupon.getExpiryDateTime())) {
-                couponService.deleteCoupon(coupon);
-            }
-        }
+        couponService.deleteCouponIfExpired();
     }
-      
+
     @Scheduled(fixedRate = 1000 * 60 * 60)
     public void sendPollInfoToAdmin() {
         SendMessage sm = botUtilityService.buildSendMessage(pollService.getPollsInfoForAdmin(), adminId);
@@ -214,27 +205,30 @@ public class BotService {
         if (splitStringsFromAdminMessage.get(0).equals(AdminMessageToken.NEWS.label)) {
             sendNewsToUsers(requestFromAdmin.getPhotoPath(), splitStringsFromAdminMessage);
         } else if (splitStringsFromAdminMessage.get(0).equals(AdminMessageToken.COUPON.label)) {
-            createNewCoupon(requestFromAdmin.getPhotoPath(), splitStringsFromAdminMessage);
+            createAndSendNewCoupon(requestFromAdmin.getPhotoPath(), splitStringsFromAdminMessage);
         }
     }
 
-    private void createNewCoupon(final String photoPath, final List<String> splitStringsFromAdminMessage) {
-        ZoneId moscowZone = ZoneId.of("Europe/Moscow");
-        LocalDateTime zonedDateTime = LocalDateTime.now(moscowZone).plusDays(Long.parseLong(splitStringsFromAdminMessage.get(5)));
-        zonedDateTime = zonedDateTime.withHour(23).withMinute(59).withSecond(59);
+    private void createAndSendNewCoupon(final String photoPath, final List<String> splitStringsFromAdminMessage){
+        NewCouponFromAdmin newCoupon = adminService.getNewCoupon(splitStringsFromAdminMessage);
 
-        couponService.createNewCoupon(Integer.parseInt(splitStringsFromAdminMessage.get(1)),
-                splitStringsFromAdminMessage.get(2),
-                splitStringsFromAdminMessage.get(3),
-                zonedDateTime);
+        Coupon coupon = couponService.createNewCoupon(newCoupon.getDiscount(), newCoupon.getName(), newCoupon.getCouponDescription(), newCoupon.getExpirationDate());
 
         List<User> usersToSendNews = userService.getAllUsersToReceiveNews();
-        String messageToUsers = BotResponses.newCoupon(splitStringsFromAdminMessage.get(4), zonedDateTime);
 
         if (photoPath == null || photoPath.isBlank()) {
-            usersToSendNews.forEach(user -> sendMessageCallback.execute(botUtilityService.buildSendMessage(messageToUsers, user.getChatId())));
+            usersToSendNews.forEach(user -> {
+                var sm = botUtilityService.buildSendMessage(BotResponses.newCoupon(newCoupon), user.getChatId());
+                couponService.addCouponButton(sm, coupon, "Активировать купон", "couponPreview_");
+                sendMessageCallback.execute(sm);
+            });
         } else {
-            usersToSendNews.forEach(user -> sendMessageWithPhotoCallback.execute(photoPath, messageToUsers, user.getChatId()));
+            usersToSendNews.forEach(user -> {
+                sendMessageWithPhotoCallback.execute(photoPath, "", user.getChatId());
+                var sm = botUtilityService.buildSendMessage(BotResponses.newCoupon(newCoupon), user.getChatId());
+                couponService.addCouponButton(sm, coupon, "Активировать купон", "couponPreview_");
+                sendMessageCallback.execute(sm);
+            });
         }
     }
 
