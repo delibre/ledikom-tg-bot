@@ -48,6 +48,33 @@ public class CouponService {
         userService.saveAll(users);
     }
 
+    public Coupon createNewCoupon(final int discount, final String name, final String couponDescription, final LocalDateTime expiryDateTime) {
+        Coupon newCoupon = new Coupon(couponDescription, name, discount, expiryDateTime);
+        couponRepository.save(newCoupon);
+
+        List<User> users = userService.getAllUsers();
+
+        if (!users.isEmpty()) {
+            users.forEach(user -> user.getCoupons().add(newCoupon));
+            userService.saveAll(users);
+        }
+
+        return newCoupon;
+    }
+
+    public void deleteCouponIfExpired() {
+        List<Coupon> coupons = getAllCoupons();
+
+        ZoneId moscowZone = ZoneId.of("Europe/Moscow");
+        LocalDateTime currentDateTime = LocalDateTime.now(moscowZone);
+
+        for (Coupon coupon : coupons) {
+            if(!Objects.equals(coupon.getName(), helloCouponName) && currentDateTime.isAfter(coupon.getExpiryDateTime())) {
+                deleteCoupon(coupon);
+            }
+        }
+    }
+
     public Coupon findByName(final String helloCouponName) {
         return couponRepository.findByName(helloCouponName).orElseThrow(() -> new RuntimeException("Coupon not found"));
     }
@@ -88,7 +115,7 @@ public class CouponService {
         String timeSign = UtilityHelper.convertIntToTimeInt(zonedDateTime.getDayOfMonth()) + "." + UtilityHelper.convertIntToTimeInt(zonedDateTime.getMonthValue()) + "." + zonedDateTime.getYear()
                 + " " + UtilityHelper.convertIntToTimeInt(zonedDateTime.getHour()) + ":" + UtilityHelper.convertIntToTimeInt(zonedDateTime.getMinute()) + ":" + UtilityHelper.convertIntToTimeInt(zonedDateTime.getSecond());
 
-        return coupon.getText() + "\n\n" + BotResponses.couponUniqueSign(timeSign);
+        return coupon.getDescription() + "\n\n" + BotResponses.couponUniqueSign(timeSign);
     }
 
     public InlineKeyboardMarkup createListOfCoupons(final Set<Coupon> coupons) {
@@ -107,5 +134,13 @@ public class CouponService {
         markup.setKeyboard(keyboard);
 
         return markup;
+    }
+
+    public List<Coupon> getAllCoupons() {
+        return couponRepository.findAll();
+    }
+
+    public void deleteCoupon(Coupon coupon) {
+        couponRepository.delete(coupon);
     }
 }

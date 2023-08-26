@@ -1,8 +1,11 @@
 package com.ledikom.utils;
 
 import com.ledikom.model.Coupon;
+import com.ledikom.model.NewCouponFromAdmin;
 import com.ledikom.model.User;
 import com.ledikom.model.UserCouponRecord;
+
+import java.time.format.DateTimeFormatter;
 
 public final class BotResponses {
 
@@ -71,6 +74,11 @@ public final class BotResponses {
 
     public static String helloCoupon(final int helloCouponDiscount) {
         return "Приветственный купон -" + helloCouponDiscount + "% на вашу следующую покупку.";
+    }
+
+
+    public static String newCoupon(final NewCouponFromAdmin coupon) {
+        return coupon.getCouponAnnouncementText() + "\n\nАкция действует до " + coupon.getExpirationDate().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
     }
 
     public static String noteAdded() {

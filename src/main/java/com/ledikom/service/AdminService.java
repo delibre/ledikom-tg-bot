@@ -1,12 +1,15 @@
 package com.ledikom.service;
 
 import com.ledikom.callback.GetFileFromBotCallback;
-import com.ledikom.model.RequestFromAdmin;
+import com.ledikom.model.NewCouponFromAdmin;
 import com.ledikom.model.NewsFromAdmin;
+import com.ledikom.model.RequestFromAdmin;
 import com.ledikom.utils.AdminMessageToken;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -51,5 +54,14 @@ public class AdminService {
         }
 
         return requestFromAdmin;
+    }
+
+    public NewCouponFromAdmin getNewCoupon(final List<String> splitStringsFromAdminMessage) {
+        ZoneId moscowZone = ZoneId.of("Europe/Moscow");
+        LocalDateTime zonedDateTime = LocalDateTime.now(moscowZone).plusDays(Long.parseLong(splitStringsFromAdminMessage.get(5)));
+        zonedDateTime = zonedDateTime.withHour(23).withMinute(59).withSecond(59);
+
+        return new NewCouponFromAdmin(zonedDateTime, Integer.parseInt(splitStringsFromAdminMessage.get(1)), splitStringsFromAdminMessage.get(2),
+                splitStringsFromAdminMessage.get(3), splitStringsFromAdminMessage.get(4));
     }
 }

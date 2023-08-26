@@ -101,6 +101,11 @@ public class BotService {
         });
     }
 
+    @Scheduled(cron = "0 0 21 * * *", zone = "Europe/Moscow")
+    public void deleteCouponsIfExpired() {
+        couponService.deleteCouponIfExpired();
+    }
+
     @Scheduled(fixedRate = 1000 * 60 * 60)
     public void sendPollInfoToAdmin() {
         SendMessage sm = botUtilityService.buildSendMessage(pollService.getPollsInfoForAdmin(), adminId);
@@ -266,6 +271,31 @@ public class BotService {
 
         if (splitStringsFromAdminMessage.get(0).equals(AdminMessageToken.NEWS.label)) {
             sendNewsToUsers(requestFromAdmin.getPhotoPath(), splitStringsFromAdminMessage);
+        } else if (splitStringsFromAdminMessage.get(0).equals(AdminMessageToken.COUPON.label)) {
+            createAndSendNewCoupon(requestFromAdmin.getPhotoPath(), splitStringsFromAdminMessage);
+        }
+    }
+
+    private void createAndSendNewCoupon(final String photoPath, final List<String> splitStringsFromAdminMessage){
+        NewCouponFromAdmin newCoupon = adminService.getNewCoupon(splitStringsFromAdminMessage);
+
+        Coupon coupon = couponService.createNewCoupon(newCoupon.getDiscount(), newCoupon.getName(), newCoupon.getCouponDescription(), newCoupon.getExpirationDate());
+
+        List<User> usersToSendNews = userService.getAllUsersToReceiveNews();
+
+        if (photoPath == null || photoPath.isBlank()) {
+            usersToSendNews.forEach(user -> {
+                var sm = botUtilityService.buildSendMessage(BotResponses.newCoupon(newCoupon), user.getChatId());
+                couponService.addCouponButton(sm, coupon, "Активировать купон", "couponPreview_");
+                sendMessageCallback.execute(sm);
+            });
+        } else {
+            usersToSendNews.forEach(user -> {
+                sendMessageWithPhotoCallback.execute(photoPath, "", user.getChatId());
+                var sm = botUtilityService.buildSendMessage(BotResponses.newCoupon(newCoupon), user.getChatId());
+                couponService.addCouponButton(sm, coupon, "Активировать купон", "couponPreview_");
+                sendMessageCallback.execute(sm);
+            });
         }
     }
 

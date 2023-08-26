@@ -18,19 +18,20 @@ public class Coupon {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String text;
+    private String description;
+    @Column(unique = true)
     private String name;
     private int discount;
     private LocalDateTime expiryDateTime;
 
-    public Coupon(final String text, final String name, final int discount) {
-        this.text = text;
+    public Coupon(final String description, final String name, final int discount) {
+        this.description = description;
         this.name = name;
         this.discount = discount;
     }
 
-    public Coupon(final String text, final String name, final int discount, final LocalDateTime expiryDateTime) {
-        this.text = text;
+    public Coupon(final String description, final String name, final int discount, final LocalDateTime expiryDateTime) {
+        this.description = description;
         this.name = name;
         this.discount = discount;
         this.expiryDateTime = expiryDateTime;
