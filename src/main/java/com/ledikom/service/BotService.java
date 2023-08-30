@@ -15,7 +15,8 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.polls.Poll;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.Set;
 
 @Component
 public class BotService {
@@ -75,6 +76,11 @@ public class BotService {
     public void sendPollInfoToAdmin() {
         SendMessage sm = botUtilityService.buildSendMessage(pollService.getPollsInfoForAdmin(), adminId);
         sendMessageCallback.execute(sm);
+    }
+
+    @Scheduled(cron = "0 1 0 * * *", zone = "Europe/Moscow")
+    public void sendPrizeIfSpecialDate() {
+        userService.sendPrizeIfSpecialDate();
     }
 
     private void updateCouponTimerAndMessage(final UserCouponKey userCouponKey, final UserCouponRecord userCouponRecord) {
@@ -181,6 +187,10 @@ public class BotService {
     public void sendNoteAndSetUserResponseState(final long chatId) {
         List<SendMessage> sendMessageList = userService.processNoteRequestAndBuildSendMessageList(chatId);
         sendMessageList.forEach(sm -> sendMessageCallback.execute(sm));
+    }
+
+    public void addUserSpecialDate(final long chatId) {
+        sendMessageCallback.execute(userService.createUserSpecialDate(chatId));
     }
 
     private void sendNewsToUsers(final String photoPath, final List<String> splitStringsFromAdminMessage) {

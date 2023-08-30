@@ -6,14 +6,17 @@ import com.ledikom.model.User;
 import com.ledikom.repository.UserRepository;
 import com.ledikom.utils.BotResponses;
 import com.ledikom.utils.UserResponseState;
-import jakarta.persistence.*;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.polls.Poll;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -57,19 +60,6 @@ public class UserService {
         return userRepository.findByChatId(chatId).orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    private String question;
-    @ElementCollection
-    @CollectionTable(name = "poll_option", joinColumns = @JoinColumn(name = "poll_id"))
-    private List<PollOption> options;
-    private Integer totalVoterCount;
-    private String type;
-    private Boolean allowMultipleAnswers;
-    private Integer correctOptionId;
-    private String explanation;
-
     public void processPoll(final Poll telegramPoll) {
         // check if not a re-vote
         if (telegramPoll.getTotalVoterCount() == 1) {
@@ -95,6 +85,11 @@ public class UserService {
             user.setResponseState(UserResponseState.NONE);
             saveUser(user);
             return BotResponses.noteAdded();
+        } else if (user.getResponseState() == UserResponseState.SENDING_DATE) {
+            user.setSpecialDate(text);
+            user.setResponseState(UserResponseState.NONE);
+            saveUser(user);
+            return BotResponses.dateAdded();
         }
 
         return "Нет такой команды!";
@@ -135,6 +130,32 @@ public class UserService {
 
         SendMessage sm = botUtilityService.buildSendMessage(BotResponses.addNote(), chatId);
         return List.of(sm);
+    }
+
+    public SendMessage createUserSpecialDate(final long chatId) {
+        User user = findByChatId(chatId);
+        user.setResponseState(UserResponseState.SENDING_DATE);
+        saveUser(user);
+
+        if (user.getSpecialDate() != null) {
+            return botUtilityService.buildSendMessage(BotResponses.specialDateAlreadyCreated(), chatId);
+        }
+
+        return botUtilityService.buildSendMessage(BotResponses.addSpecialDate(), chatId);
+    }
+
+    public void sendPrizeIfSpecialDate() {
+        List<User> users = getAllUsers();
+
+        users.forEach(user -> {
+            LocalDate date = LocalDate.now(ZoneId.of("Europe/Moscow"));
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM");
+            String now = date.format(formatter);
+
+            if (Objects.equals(user.getSpecialDate(), now)) {
+                System.out.println("user " + user.getId() + " has special date today");
+            }
+        } );
     }
 
     public boolean userIsInActiveState(final Long chatId) {

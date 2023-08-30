@@ -64,6 +64,8 @@ public class LedikomBot extends TelegramLongPollingBot {
                 this.botService::sendTriggerReceiveNewsMessage);
         chatIdActions.put(cmd -> cmd.equals("/zametki"),
                 this.botService::sendNoteAndSetUserResponseState);
+        chatIdActions.put(cmd -> cmd.equals("/osobennaya-data"),
+                this.botService::addUserSpecialDate);
     }
 
     public SendMessageWithPhotoCallback getSendMessageWithPhotoCallback() {

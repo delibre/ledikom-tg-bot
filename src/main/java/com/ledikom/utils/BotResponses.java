@@ -92,4 +92,16 @@ public final class BotResponses {
     public static String addNote() {
         return "Введите нотатку и вышлите сообщение";
     }
+
+    public static String addSpecialDate() {
+        return "Введите свою особенную дату в формате дд.мм:";
+    }
+
+    public static String specialDateAlreadyCreated() {
+        return "Вы уже создали свою особенную дату";
+    }
+
+    public static String dateAdded() {
+        return "Особенная дата создана";
+    }
 }
